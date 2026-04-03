@@ -12,6 +12,13 @@ import java.time.Duration;
 public class RedisService {
 
     private final StringRedisTemplate redisTemplate;
+    public long incrementCount(String key) {
+        Long count= redisTemplate.opsForValue().increment(key);
+        if(count!=null && count==1){
+            redisTemplate.expire(key, Duration.ofMinutes(5));
+        }
+        return count!=null?count:0;
+    }
 
     public boolean isDuplicate(String key){
         boolean exists = redisTemplate.hasKey(key);
