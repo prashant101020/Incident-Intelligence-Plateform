@@ -2,6 +2,7 @@ package com.prashant.incident_consumer.consumer;
 
 import com.prashant.incident_consumer.model.LogEvent;
 import com.prashant.incident_consumer.service.IncidentClient;
+import com.prashant.incident_consumer.service.RedisService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -13,9 +14,16 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class KafkaLogConsumer {
     private final IncidentClient incidentClient;
+    private final RedisService redisService;
 
     @KafkaListener(topics = "logs-topic", groupId = "incident-group")
     public void consume(@Payload LogEvent logEvent){
+        String key=redisService.generateKey(logEvent);
+        if(redisService.isDuplicate(key)){
+            log.info("Duplicate log event detected, skipping: {}", logEvent);
+            return;
+        }
+
         try {
             log.info("Received Logs: {}", logEvent);
             incidentClient.sendToIncidentService(logEvent);
