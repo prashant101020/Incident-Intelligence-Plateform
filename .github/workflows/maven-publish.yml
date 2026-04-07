@@ -1,18 +1,14 @@
-# This workflow will build a package using Maven and then publish it to GitHub packages when a release is created
-# For more information see: https://github.com/actions/setup-java/blob/main/docs/advanced-usage.md#apache-maven-with-a-settings-path
-
 name: Maven Package
 
 on:
   release:
     types: [created]
   push:
-    branches: [master]  # Or your main branch
-  workflow_dispatch:    # Manual trigger
-  
+    branches: [master]   # Or your main branch
+  workflow_dispatch:     # Manual trigger
+
 jobs:
   build:
-
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -20,18 +16,29 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+
     - name: Set up JDK 21
       uses: actions/setup-java@v4
       with:
         java-version: '21'
         distribution: 'temurin'
-        server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
-        settings-path: ${{ github.workspace }} # location for the settings.xml file
+        server-id: github   # must match <distributionManagement><repository><id> in pom.xml
+        settings-path: ${{ github.workspace }}
 
-    - name: Build with Maven
+    # Build and deploy incident-service
+    - name: Build incident-service
       run: mvn -B package --file incident-service/pom.xml
 
-    - name: Publish to GitHub Packages Apache Maven
-      run: mvn deploy -s $GITHUB_WORKSPACE/settings.xml
+    - name: Deploy incident-service
+      run: mvn deploy -s $GITHUB_WORKSPACE/settings.xml --file incident-service/pom.xml
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+
+    # Build and deploy incident-consumer
+    - name: Build incident-consumer
+      run: mvn -B package --file incident-consumer/pom.xml
+
+    - name: Deploy incident-consumer
+      run: mvn deploy -s $GITHUB_WORKSPACE/settings.xml --file incident-consumer/pom.xml
       env:
         GITHUB_TOKEN: ${{ github.token }}
