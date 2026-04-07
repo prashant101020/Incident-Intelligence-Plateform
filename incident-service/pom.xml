@@ -20,6 +20,21 @@
 	<developers>
 		<developer/>
 	</developers>
+<distributionManagement>
+  <repository>	
+    <id>github</id>
+    <url>https://maven.pkg.github.com/prashant101020/REPOSITORY</url>
+  </repository>
+</distributionManagement>
+<settings>
+  <servers>
+    <server>
+      <id>github</id>
+      <username>prashant101020</username>
+      <password>${env.GITHUB_TOKEN}</password>
+    </server>
+  </servers>
+</settings>
 	<scm>
 		<connection/>
 		<developerConnection/>
