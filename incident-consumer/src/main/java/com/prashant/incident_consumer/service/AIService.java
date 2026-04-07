@@ -1,18 +1,94 @@
 package com.prashant.incident_consumer.service;
 
-import com.prashant.incident_consumer.model.LogEvent;
+import com.prashant.incident_consumer.model.*;
+import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+import tools.jackson.databind.ObjectMapper;
+
+import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class AIService {
-    public String analyzeLog(LogEvent log, long count, String severity) {
-        // Placeholder for AI analysis logic
-        // In a real implementation, this would call an AI model or service
-        if (log.getMessage().contains("DB") || log.getMessage().contains("exception")) {
-            return "Root cause: DB overload | Fix: Check connection pool / slow queries";
-        } else if (log.getMessage().contains("timeout")) {
-            return "Root cause: Service latency | Fix: Check downstream dependencies";
+
+    @org.springframework.beans.factory.annotation.Value("${ai.openai.api-key}")
+    private String apiKey;
+
+    @Value("${ai.openai.url}")
+    private String url;
+
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    public AIResponse analyze(LogEvent log, long count, String severity) {
+
+        String prompt = buildPrompt(log, count, severity);
+
+        OpenAIRequest request = new OpenAIRequest(
+                "gpt-4o-mini",
+                List.of(new Message("user", prompt))
+        );
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(apiKey);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<OpenAIRequest> entity = new HttpEntity<>(request, headers);
+
+        try {
+            ResponseEntity<OpenAIResponse> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    entity,
+                    OpenAIResponse.class
+            );
+
+            String content = response.getBody()
+                    .getChoices()
+                    .get(0)
+                    .getMessage()
+                    .getContent();
+
+            return parseResponse(content);
+
+        } catch (Exception e) {
+            return new AIResponse("Unknown issue", "Manual investigation required");
         }
-      return  "Root cause: Unknown | Fix: Further investigation needed";
+    }
+    private String buildPrompt(LogEvent log, long count, String severity) {
+        return """
+        Analyze the following system error log and provide:
+
+        1. Root Cause
+        2. Suggested Fix
+
+        Log Details:
+        Service: %s
+        Error: %s
+        Frequency: %d
+        Severity: %s
+
+        Respond strictly in JSON:
+        {
+          "rootCause": "...",
+          "suggestedFix": "..."
+        }
+        """.formatted(
+                log.getService(),
+                log.getMessage(),
+                count,
+                severity
+        );
+    }
+    private AIResponse parseResponse(String content) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            return mapper.readValue(content, AIResponse.class);
+        } catch (Exception e) {
+            return new AIResponse("Parsing failed", "Check logs manually");
+        }
     }
 }

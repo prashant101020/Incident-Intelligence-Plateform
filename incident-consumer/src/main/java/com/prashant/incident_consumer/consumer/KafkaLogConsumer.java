@@ -1,6 +1,7 @@
 package com.prashant.incident_consumer.consumer;
 
 import com.prashant.incident_consumer.Util.SeverityUtil;
+import com.prashant.incident_consumer.model.AIResponse;
 import com.prashant.incident_consumer.model.LogEvent;
 import com.prashant.incident_consumer.service.AIService;
 import com.prashant.incident_consumer.service.IncidentClient;
@@ -29,12 +30,18 @@ public class KafkaLogConsumer {
         }
 
         long count =redisService.incrementCount(key);
-        String AIAnalysis = aiService.analyzeLog(logEvent, count, severityUtil.getSeverity(count));
+
+//        String AIAnalysis = aiService.analyzeLog(logEvent, count, severityUtil.getSeverity(count));
         log.info("Received Logs: {}", logEvent);
         String severity = severityUtil.getSeverity(count);
+        AIResponse ai = aiService.analyze(logEvent, count, severity);
+
+        log.info(ai.getRootCause());
+        log.info(ai.getSuggestedFix());
+
 
         log.info("Log event count for Service {}: {}, severity: {}", logEvent.getService(), count, severity);
-        log.info("AI Analysis for log event: {}, analysis: {}", logEvent, AIAnalysis);
+        log.info("AI Analysis for log event: {}, analysis: {}", logEvent, ai);
 
 
 
