@@ -23,5 +23,5 @@ server:
 
 ai:
   openai:
-    api-key: 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
+    api-key: ${EXTERNAL_API_KEY}
     url: https://openrouter.ai/api/v1/chat/completions
