@@ -4,17 +4,24 @@ spring:
     consumer:
       group-id: incident-group
       auto-offset-reset: latest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+
+      key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
 
       properties:
+        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+
         spring.json.trusted.packages: "*"
         spring.json.value.default.type: com.prashant.incident_consumer.model.LogEvent
+    listener:
+      ack-mode: record
+
 
 server:
   port: 8081
 
 ai:
   openai:
-    api-key:
-    url: https://api.openai.com/v1/chat/completions
+    api-key: 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
+    url: https://openrouter.ai/api/v1/chat/completions

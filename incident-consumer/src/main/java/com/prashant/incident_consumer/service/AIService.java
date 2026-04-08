@@ -28,14 +28,15 @@ public class AIService {
         String prompt = buildPrompt(log, count, severity);
 
         OpenAIRequest request = new OpenAIRequest(
-                "gpt-4o-mini",
+                "gpt-oss-120b",
                 List.of(new Message("user", prompt))
         );
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(apiKey);
         headers.setContentType(MediaType.APPLICATION_JSON);
-
+        headers.set("HTTP-Referer", "http://localhost:8081");
+        headers.set("X-Title", "incident-intelligence");
         HttpEntity<OpenAIRequest> entity = new HttpEntity<>(request, headers);
 
         try {

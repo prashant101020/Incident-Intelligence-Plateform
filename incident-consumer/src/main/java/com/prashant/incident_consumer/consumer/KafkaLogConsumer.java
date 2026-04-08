@@ -22,6 +22,11 @@ public class KafkaLogConsumer {
     private final AIService aiService;
     @KafkaListener(topics = "logs-topic", groupId = "incident-group")
     public void consume(@Payload LogEvent logEvent){
+
+        if (logEvent.getMessage() == null) {
+            throw new RuntimeException("Invalid log message");
+        }
+
         String key=redisService.generateKey(logEvent);
 
         if(redisService.isDuplicate(key)){
@@ -34,10 +39,20 @@ public class KafkaLogConsumer {
 //        String AIAnalysis = aiService.analyzeLog(logEvent, count, severityUtil.getSeverity(count));
         log.info("Received Logs: {}", logEvent);
         String severity = severityUtil.getSeverity(count);
-        AIResponse ai = aiService.analyze(logEvent, count, severity);
-
-        log.info(ai.getRootCause());
-        log.info(ai.getSuggestedFix());
+        AIResponse ai;
+        try{
+            ai = aiService.analyze(logEvent, count, severity);
+        }catch (Exception e){
+            if(logEvent.getMessage().contains("db")){
+                ai = new AIResponse("Database connection issue", "Check database connectivity and credentials");
+            } else if (logEvent.getMessage().contains("timeout")) {
+                ai = new AIResponse("Service timeout", "Investigate service performance and load");
+            } else {
+                ai = new AIResponse("Unknown issue", "Manual investigation required");
+            }
+            log.error("",ai);
+            return ;
+        }
 
 
         log.info("Log event count for Service {}: {}, severity: {}", logEvent.getService(), count, severity);
